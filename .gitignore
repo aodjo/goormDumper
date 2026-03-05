@@ -1,0 +1,13 @@
+tmp-*
+node_modules
+dist
+sample*
+junks/
+cookie.txt
+cookie*.txt
+*.cookie
+*.cookies
+*.session
+.env
+.env.*
+.auth/
