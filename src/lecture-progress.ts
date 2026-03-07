@@ -16,10 +16,23 @@ interface LectureProgressDumpOptions {
   lectureTitleQuery?: string;
 }
 
+/**
+ * 값이 일반 객체인지 판별합니다.
+ *
+ * @param value 검사할 값
+ * @return 일반 객체 여부
+ */
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Goorm 요청용 공통 헤더를 구성합니다.
+ *
+ * @param accept Accept 헤더 값
+ * @param cookie 로그인 쿠키 문자열
+ * @return fetch 요청 헤더 객체
+ */
 function buildHeaders(accept: string, cookie?: string): HeadersInit {
   const headers: HeadersInit = {
     "user-agent": "dumpgoorm-cli/1.0",
@@ -33,6 +46,12 @@ function buildHeaders(accept: string, cookie?: string): HeadersInit {
   return headers;
 }
 
+/**
+ * HTML에서 `window.__INITIAL_STATE__`를 실행해 상태 객체를 추출합니다.
+ *
+ * @param html 강의 페이지 HTML
+ * @return 파싱된 초기 상태 객체
+ */
 function parseInitialStateFromHtml(html: string): UnknownRecord {
   const marker = "window.__INITIAL_STATE__ = ";
   const start = html.indexOf(marker);
@@ -62,6 +81,13 @@ function parseInitialStateFromHtml(html: string): UnknownRecord {
   return windowObject.__INITIAL_STATE__;
 }
 
+/**
+ * JSON API를 요청해 응답 본문을 반환합니다.
+ *
+ * @param url 요청 URL
+ * @param cookie 로그인 쿠키 문자열
+ * @return 파싱된 JSON 데이터
+ */
 async function fetchJson(url: string, cookie?: string): Promise<unknown> {
   const response = await fetch(url, {
     headers: buildHeaders("application/json", cookie)
@@ -73,6 +99,13 @@ async function fetchJson(url: string, cookie?: string): Promise<unknown> {
   return response.json();
 }
 
+/**
+ * HTML 페이지를 요청하고 로그인 상태를 확인합니다.
+ *
+ * @param url 요청 URL
+ * @param cookie 로그인 쿠키 문자열
+ * @return 응답 HTML 문자열
+ */
 async function fetchText(url: string, cookie?: string): Promise<string> {
   const response = await fetch(url, {
     headers: buildHeaders("text/html,application/xhtml+xml", cookie),
@@ -91,6 +124,17 @@ async function fetchText(url: string, cookie?: string): Promise<string> {
   return response.text();
 }
 
+/**
+ * 객체/배열 트리를 순회하며 콜백을 호출합니다.
+ *
+ * @param value 순회 시작 값
+ * @param callback 각 노드에서 호출할 콜백
+ * @param key 현재 노드 키
+ * @param path 현재 노드 경로
+ * @param depth 현재 순회 깊이
+ * @param seen 순환 참조 방지용 방문 집합
+ * @return 반환값 없음
+ */
 function walkObject(
   value: unknown,
   callback: (node: unknown, key: string | null, path: string[]) => void,
@@ -125,6 +169,13 @@ function walkObject(
   }
 }
 
+/**
+ * 주어진 키 후보 중 첫 번째 문자열 값을 찾습니다.
+ *
+ * @param record 조회 대상 객체
+ * @param keys 키 후보 목록
+ * @return 찾은 문자열 값
+ */
 function getStringField(record: UnknownRecord, keys: string[]): string | undefined {
   for (const key of keys) {
     const value = record[key];
@@ -135,6 +186,13 @@ function getStringField(record: UnknownRecord, keys: string[]): string | undefin
   return undefined;
 }
 
+/**
+ * 주어진 키 후보 중 첫 번째 숫자 값을 찾습니다.
+ *
+ * @param record 조회 대상 객체
+ * @param keys 키 후보 목록
+ * @return 찾은 숫자 값
+ */
 function getNumberField(record: UnknownRecord, keys: string[]): number | undefined {
   for (const key of keys) {
     const value = record[key];
@@ -148,6 +206,12 @@ function getNumberField(record: UnknownRecord, keys: string[]): number | undefin
   return undefined;
 }
 
+/**
+ * 개별 강의 아이템의 완료 여부를 추정합니다.
+ *
+ * @param lesson 강의/콘텐츠 객체
+ * @return 완료 여부
+ */
 function isLessonCompleted(lesson: UnknownRecord): boolean {
   const explicitKeys = [
     "isCompleted",
@@ -190,6 +254,12 @@ function isLessonCompleted(lesson: UnknownRecord): boolean {
   return false;
 }
 
+/**
+ * 챕터 객체에서 강의 배열을 추정해 찾습니다.
+ *
+ * @param chapter 챕터 객체
+ * @return 강의 객체 배열
+ */
 function findLessonArray(chapter: UnknownRecord): UnknownRecord[] | undefined {
   const candidateKeys = ["lessons", "lessonData", "lessonList", "children", "items", "curriculumData"];
   for (const key of candidateKeys) {
@@ -205,6 +275,13 @@ function findLessonArray(chapter: UnknownRecord): UnknownRecord[] | undefined {
   return undefined;
 }
 
+/**
+ * 챕터 객체를 섹션 진행 정보로 변환합니다.
+ *
+ * @param chapter 챕터 객체
+ * @param order 섹션 순번
+ * @return 섹션 진행 정보
+ */
 function sectionFromChapter(chapter: UnknownRecord, order: number): LectureSectionProgress {
   const title =
     getStringField(chapter, ["subject", "title", "name", "chapterTitle", "lessonTitle"]) ?? `Section ${order}`;
@@ -240,6 +317,12 @@ function sectionFromChapter(chapter: UnknownRecord, order: number): LectureSecti
   };
 }
 
+/**
+ * 초기 상태에서 섹션 배열을 추출해 진행 정보 목록으로 변환합니다.
+ *
+ * @param state 강의 초기 상태 객체
+ * @return 섹션 진행 정보 목록
+ */
 function extractSections(state: UnknownRecord): LectureSectionProgress[] {
   const arrays: Array<{path: string; items: UnknownRecord[]}> = [];
 
@@ -292,6 +375,12 @@ function extractSections(state: UnknownRecord): LectureSectionProgress[] {
   return top.items.map((item, index) => sectionFromChapter(item, index + 1));
 }
 
+/**
+ * 마지막 수강 강의 제목 후보를 추출합니다.
+ *
+ * @param state 강의 초기 상태 객체
+ * @return 마지막 수강 강의 제목
+ */
 function extractLastLessonTitle(state: UnknownRecord): string | undefined {
   const candidates: string[] = [];
 
@@ -321,6 +410,12 @@ function extractLastLessonTitle(state: UnknownRecord): string | undefined {
   return candidates[0];
 }
 
+/**
+ * 강의 기본 메타 정보를 초기 상태에서 추출합니다.
+ *
+ * @param state 강의 초기 상태 객체
+ * @return 강의 제목/식별자 메타 정보
+ */
 function extractLectureMeta(state: UnknownRecord): {title: string; sequence?: number; index?: string; urlSlug?: string} {
   const topLectureData = isRecord(state.lectureData) ? state.lectureData : undefined;
   if (topLectureData) {
@@ -348,6 +443,12 @@ function extractLectureMeta(state: UnknownRecord): {title: string; sequence?: nu
   return fallback ?? {title: "Unknown Lecture"};
 }
 
+/**
+ * 전체 진도 계산에 필요한 전역 카운트 값을 추출합니다.
+ *
+ * @param state 강의 초기 상태 객체
+ * @return 완료 수/전체 수/진도율 후보
+ */
 function extractGlobalCounts(state: UnknownRecord): {completed?: number; total?: number; progressPercent?: number} {
   const completedKeys = [
     "completedLessons",
@@ -381,6 +482,12 @@ function extractGlobalCounts(state: UnknownRecord): {completed?: number; total?:
   return {completed, total, progressPercent};
 }
 
+/**
+ * 강의 진도 요약을 Markdown으로 변환합니다.
+ *
+ * @param summary 강의 진도 요약 정보
+ * @return Markdown 문자열
+ */
 function toMarkdown(summary: LectureProgressSummary): string {
   const lines: string[] = [];
 
@@ -417,6 +524,12 @@ function toMarkdown(summary: LectureProgressSummary): string {
   return lines.join("\n").trimEnd() + "\n";
 }
 
+/**
+ * learn URL을 절대 URL 형태로 정규화합니다.
+ *
+ * @param url 사용자가 입력한 learn URL
+ * @return 절대 URL 문자열
+ */
 function normalizeLearnUrl(url: string): string {
   if (url.startsWith("http://") || url.startsWith("https://")) {
     return url;
@@ -429,6 +542,13 @@ function normalizeLearnUrl(url: string): string {
   return `${EDU_BASE_URL}/${url}`;
 }
 
+/**
+ * 내 강의 목록에서 옵션에 맞는 강의를 선택합니다.
+ *
+ * @param list 내 강의 목록 배열
+ * @param options 강의 선택 옵션
+ * @return 선택된 강의 객체
+ */
 function pickLectureFromJoinedList(
   list: UnknownRecord[],
   options: LectureProgressDumpOptions
@@ -449,6 +569,12 @@ function pickLectureFromJoinedList(
   return list[0];
 }
 
+/**
+ * 내 강의 목록 API를 순회해 대상 강의의 learn URL을 찾습니다.
+ *
+ * @param options 강의 선택 옵션
+ * @return 대상 강의 learn URL
+ */
 async function resolveLearnUrlFromJoinedApi(options: LectureProgressDumpOptions): Promise<string> {
   let page = 1;
   while (page <= 20) {
@@ -477,6 +603,13 @@ async function resolveLearnUrlFromJoinedApi(options: LectureProgressDumpOptions)
   throw new Error("내 강의 목록에서 대상 강의를 찾지 못했습니다. sequence/index/title 또는 learn URL을 지정해 주세요.");
 }
 
+/**
+ * 초기 상태 객체를 최종 강의 진도 요약으로 변환합니다.
+ *
+ * @param state 강의 초기 상태 객체
+ * @param sourceUrl 기준이 된 강의 페이지 URL
+ * @return 강의 진도 요약 정보
+ */
 function buildSummaryFromState(state: UnknownRecord, sourceUrl: string): LectureProgressSummary {
   const lectureMeta = extractLectureMeta(state);
   const sections = extractSections(state);
@@ -513,10 +646,23 @@ function buildSummaryFromState(state: UnknownRecord, sourceUrl: string): Lecture
   };
 }
 
+/**
+ * 외부에서 전달된 초기 상태 객체를 진도 요약으로 변환합니다.
+ *
+ * @param state 강의 초기 상태 객체
+ * @param sourceUrl 기준 URL
+ * @return 강의 진도 요약 정보
+ */
 export function extractLectureProgressFromState(state: Record<string, unknown>, sourceUrl: string): LectureProgressSummary {
   return buildSummaryFromState(state, sourceUrl);
 }
 
+/**
+ * 강의 진도를 조회해 JSON/Markdown/원본 상태 파일로 저장합니다.
+ *
+ * @param options 강의 진도 덤프 실행 옵션
+ * @return 강의 진도 요약 정보
+ */
 export async function dumpLectureProgress(options: LectureProgressDumpOptions): Promise<LectureProgressSummary> {
   await fs.mkdir(options.outDir, {recursive: true});
 

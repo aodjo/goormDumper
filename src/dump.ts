@@ -9,6 +9,12 @@ interface ProblemRecord {
   detail: Awaited<ReturnType<typeof fetchQuizDetailFromExamPage>>;
 }
 
+/**
+ * 문제 상세 레코드를 Markdown 문서로 변환합니다.
+ *
+ * @param record 문제 목록/상세 정보가 결합된 레코드
+ * @return Markdown 문자열
+ */
 function toMarkdown(record: ProblemRecord): string {
   const {list, detail} = record;
   const sections: string[] = [];
@@ -57,6 +63,13 @@ function toMarkdown(record: ProblemRecord): string {
   return sections.join("\n").trimEnd() + "\n";
 }
 
+/**
+ * Goorm 문제 목록과 상세를 조회해 파일로 덤프합니다.
+ *
+ * @param config 덤프 실행 설정
+ * @param onProgress 진행 상태 이벤트 콜백
+ * @return 덤프 결과 요약 정보
+ */
 export async function dumpGoormProblems(
   config: DumpConfig,
   onProgress?: (event: DumpProgressEvent) => void

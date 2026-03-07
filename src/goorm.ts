@@ -32,6 +32,12 @@ turndownService.addRule("horizontalRule", {
   replacement: () => "\n\n---\n\n"
 });
 
+/**
+ * 텍스트의 줄바꿈과 공백을 정규화합니다.
+ *
+ * @param value 정규화할 문자열
+ * @return 정규화된 문자열
+ */
 function normalizeWhitespace(value: string): string {
   return value
     .replace(/\r\n/g, "\n")
@@ -39,11 +45,26 @@ function normalizeWhitespace(value: string): string {
     .trim();
 }
 
+/**
+ * 시험/문제 번호로 문제 상세 URL을 생성합니다.
+ *
+ * @param examSequence 시험 시퀀스
+ * @param examSlug 시험 슬러그
+ * @param quizNumber 문제 번호
+ * @return 문제 상세 URL
+ */
 function toExamUrl(examSequence: number, examSlug: string, quizNumber: number): string {
   const encodedSlug = encodeURIComponent(examSlug);
   return `${GOORM_BASE_URL}/exam/${examSequence}/${encodedSlug}/quiz/${quizNumber}`;
 }
 
+/**
+ * Goorm 요청용 공통 헤더를 구성합니다.
+ *
+ * @param accept Accept 헤더 값
+ * @param cookie 로그인 쿠키 문자열
+ * @return fetch 요청 헤더 객체
+ */
 function buildHeaders(accept: string, cookie?: string): HeadersInit {
   const headers: HeadersInit = {
     "user-agent": "dumpgoorm-cli/1.0",
@@ -57,6 +78,13 @@ function buildHeaders(accept: string, cookie?: string): HeadersInit {
   return headers;
 }
 
+/**
+ * 쿠키를 포함해 HTML을 요청합니다.
+ *
+ * @param url 요청 URL
+ * @param cookie 로그인 쿠키 문자열
+ * @return 응답 HTML 문자열
+ */
 async function fetchTextWithCookie(url: string, cookie?: string): Promise<string> {
   const response = await fetch(url, {
     headers: buildHeaders("text/html,application/xhtml+xml", cookie)
@@ -69,6 +97,12 @@ async function fetchTextWithCookie(url: string, cookie?: string): Promise<string
   return response.text();
 }
 
+/**
+ * HTML 내 `window.__INITIAL_STATE__`를 추출해 객체로 파싱합니다.
+ *
+ * @param html Goorm 페이지 HTML
+ * @return 파싱된 초기 상태 객체
+ */
 function parseInitialStateFromHtml(html: string): Record<string, unknown> {
   const marker = "window.__INITIAL_STATE__ = ";
   const start = html.indexOf(marker);
@@ -99,6 +133,14 @@ function parseInitialStateFromHtml(html: string): Record<string, unknown> {
   return windowObject.__INITIAL_STATE__;
 }
 
+/**
+ * 문제 목록 API를 조회합니다.
+ *
+ * @param page 조회 페이지 번호
+ * @param limit 페이지당 개수
+ * @param cookie 로그인 쿠키 문자열
+ * @return 문제 목록 응답 객체
+ */
 export async function fetchQuizPage(page: number, limit: number, cookie?: string): Promise<QuizPageResponse> {
   const url = new URL("/api/algo/quizzes", GOORM_BASE_URL);
   url.searchParams.set("page", String(page));
@@ -120,6 +162,13 @@ export async function fetchQuizPage(page: number, limit: number, cookie?: string
   return body;
 }
 
+/**
+ * 초기 상태에서 대상 문제의 순번을 추정합니다.
+ *
+ * @param state 페이지 초기 상태 객체
+ * @param targetQuizIndex 대상 문제 index
+ * @return 문제 순번(1부터 시작)
+ */
 function findQuizNumberFromState(state: Record<string, unknown>, targetQuizIndex: string): number {
   const exam = state.exam as Record<string, unknown> | undefined;
   const examData = exam?.examData as Record<string, unknown> | undefined;
@@ -132,6 +181,12 @@ function findQuizNumberFromState(state: Record<string, unknown>, targetQuizIndex
   return position >= 0 ? position + 1 : 1;
 }
 
+/**
+ * 초기 상태에서 현재 문제 객체를 가져옵니다.
+ *
+ * @param state 페이지 초기 상태 객체
+ * @return 현재 문제 객체
+ */
 function getCurrentQuizFromState(state: Record<string, unknown>): Record<string, unknown> {
   const exam = state.exam as Record<string, unknown> | undefined;
   const currentQuiz = exam?.currentQuiz as Record<string, unknown> | undefined;
@@ -142,6 +197,13 @@ function getCurrentQuizFromState(state: Record<string, unknown>): Record<string,
   return currentQuiz;
 }
 
+/**
+ * 문제 목록 엔트리로부터 문제 상세 정보를 조회/파싱합니다.
+ *
+ * @param entry 문제 목록 엔트리
+ * @param cookie 로그인 쿠키 문자열
+ * @return 덤프용 문제 상세 데이터
+ */
 export async function fetchQuizDetailFromExamPage(entry: QuizListEntry, cookie?: string): Promise<QuizDumpDetail> {
   const examSequence = entry.exam?.sequence;
   const examSlug = entry.exam?.url_slug;

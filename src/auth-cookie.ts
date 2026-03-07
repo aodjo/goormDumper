@@ -35,6 +35,12 @@ const BROWSER_PATHS: Record<Exclude<BrowserChoice, "auto">, string[]> = {
   ]
 };
 
+/**
+ * 실행 가능한 브라우저 경로를 찾아 반환합니다.
+ *
+ * @param target 사용자가 지정한 브라우저 선택 값
+ * @return 선택된 브라우저와 실행 파일 경로
+ */
 function findBrowserExecutable(target: BrowserChoice): BrowserExecutable {
   const ordered =
     target === "auto"
@@ -58,10 +64,22 @@ function findBrowserExecutable(target: BrowserChoice): BrowserExecutable {
   );
 }
 
+/**
+ * 쿠키 배열을 HTTP Cookie 헤더 문자열로 직렬화합니다.
+ *
+ * @param cookies 브라우저 쿠키 목록
+ * @return Cookie 헤더 문자열
+ */
 function formatCookieHeader(cookies: Array<{name: string; value: string}>): string {
   return cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
 }
 
+/**
+ * 현재 쿠키가 로그인 상태인지 API 호출로 검증합니다.
+ *
+ * @param cookieHeader Cookie 헤더 문자열
+ * @return 로그인 유효 여부
+ */
 async function checkLoginCookie(cookieHeader: string): Promise<boolean> {
   if (!cookieHeader) {
     return false;
@@ -82,6 +100,12 @@ async function checkLoginCookie(cookieHeader: string): Promise<boolean> {
   }
 }
 
+/**
+ * 브라우저를 띄워 로그인 쿠키를 자동으로 추출합니다.
+ *
+ * @param options 쿠키 추출 실행 옵션
+ * @return 유효한 Cookie 헤더 문자열
+ */
 export async function captureGoormCookie(options: CaptureCookieOptions): Promise<string> {
   if (!process.stdin.isTTY) {
     throw new Error("자동 쿠키 추출은 TTY 환경에서만 실행할 수 있습니다.");

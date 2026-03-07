@@ -23,10 +23,22 @@ type RunResult =
 
 const BROWSER_ORDER: BrowserChoice[] = ["auto", "edge", "chrome", "brave"];
 
+/**
+ * 내부 모드 값을 화면 표시용 라벨로 변환합니다.
+ *
+ * @param mode 덤프 모드 값
+ * @return 사용자 표시 라벨
+ */
 function modeLabel(mode: DumpMode): string {
   return mode === "problem" ? "문제 덤프" : "강좌 진도 덤프";
 }
 
+/**
+ * 브라우저 선택 값을 화면 표시 문자열로 변환합니다.
+ *
+ * @param browser 브라우저 선택 값
+ * @return 사용자 표시 라벨
+ */
 function browserLabel(browser: BrowserChoice): string {
   if (browser === "auto") {
     return "auto (edge > chrome > brave)";
@@ -35,6 +47,12 @@ function browserLabel(browser: BrowserChoice): string {
   return browser;
 }
 
+/**
+ * 문제 덤프 진행 이벤트를 로그 문자열로 변환합니다.
+ *
+ * @param event 진행 이벤트 객체
+ * @return 화면에 출력할 로그 문자열
+ */
 function formatProblemEvent(event: DumpProgressEvent): string {
   switch (event.type) {
     case "page":
@@ -52,6 +70,13 @@ function formatProblemEvent(event: DumpProgressEvent): string {
   }
 }
 
+/**
+ * 브라우저 선택 값을 순환 이동합니다.
+ *
+ * @param current 현재 브라우저 값
+ * @param direction 이동 방향
+ * @return 다음 브라우저 값
+ */
 function cycleBrowser(current: BrowserChoice, direction: 1 | -1): BrowserChoice {
   const index = BROWSER_ORDER.indexOf(current);
   if (index < 0) {
@@ -62,10 +87,22 @@ function cycleBrowser(current: BrowserChoice, direction: 1 | -1): BrowserChoice 
   return BROWSER_ORDER[nextIndex];
 }
 
+/**
+ * 현재 작업 디렉터리 기준 상대경로를 생성합니다.
+ *
+ * @param absolutePath 절대경로
+ * @return 상대경로 문자열
+ */
 function relativePath(absolutePath: string): string {
   return path.relative(process.cwd(), absolutePath) || ".";
 }
 
+/**
+ * 모드에 맞는 설정 필드 순서를 반환합니다.
+ *
+ * @param mode 덤프 모드
+ * @return 설정 필드 배열
+ */
 function keysByMode(mode: DumpMode): ConfigField[] {
   if (mode === "problem") {
     return ["pages", "limit", "outDir", "delayMs"];
@@ -74,6 +111,11 @@ function keysByMode(mode: DumpMode): ConfigField[] {
   return ["outDir", "learnUrl", "lectureTitleQuery", "browser"];
 }
 
+/**
+ * dumpgoorm 인터랙티브 UI를 렌더링합니다.
+ *
+ * @return React CLI 화면 컴포넌트
+ */
 export function App(): React.JSX.Element {
   const {exit} = useApp();
 
@@ -126,10 +168,21 @@ export function App(): React.JSX.Element {
     };
   }, [browser, learnUrlInput, lectureOutDirInput, lectureTitleQueryInput]);
 
+  /**
+   * 실행 로그 라인을 최대 개수로 유지하며 추가합니다.
+   *
+   * @param line 추가할 로그 문자열
+   * @return 반환값 없음
+   */
   const appendLog = (line: string): void => {
     setLogs((prev) => [...prev, line].slice(-14));
   };
 
+  /**
+   * 실행 상태 관련 state를 초기화합니다.
+   *
+   * @return 반환값 없음
+   */
   const resetRunState = (): void => {
     setRunStarted(false);
     setLogs([]);
@@ -137,21 +190,42 @@ export function App(): React.JSX.Element {
     setResult(null);
   };
 
+  /**
+   * 모드 선택 화면으로 복귀합니다.
+   *
+   * @return 반환값 없음
+   */
   const goToModeSelection = (): void => {
     resetRunState();
     setFocusedFieldIndex(0);
     setPhase("mode");
   };
 
+  /**
+   * 현재 설정으로 덤프 실행을 시작합니다.
+   *
+   * @return 반환값 없음
+   */
   const startRun = (): void => {
     resetRunState();
     setPhase("running");
   };
 
+  /**
+   * 설정 입력 포커스를 이동합니다.
+   *
+   * @param direction 이동 방향
+   * @return 반환값 없음
+   */
   const moveFieldFocus = (direction: 1 | -1): void => {
     setFocusedFieldIndex((prev) => (prev + direction + configFields.length) % configFields.length);
   };
 
+  /**
+   * 다음 필드로 이동하거나 마지막 필드면 실행을 시작합니다.
+   *
+   * @return 반환값 없음
+   */
   const advanceField = (): void => {
     if (focusedFieldIndex >= configFields.length - 1) {
       startRun();
@@ -177,6 +251,12 @@ export function App(): React.JSX.Element {
     let active = true;
     setRunStarted(true);
 
+    /**
+     * 실행 중 오류를 화면 상태로 반영합니다.
+     *
+     * @param error 발생한 오류 객체
+     * @return 반환값 없음
+     */
     const fail = (error: unknown): void => {
       if (!active) {
         return;
@@ -319,6 +399,12 @@ export function App(): React.JSX.Element {
     }
   });
 
+  /**
+   * 문제 덤프 설정 필드를 렌더링합니다.
+   *
+   * @param field 렌더링할 문제 설정 필드
+   * @return 설정 필드 JSX
+   */
   const renderProblemField = (field: ProblemField): React.JSX.Element => {
     const active = focusedField === field;
     const marker = active ? ">" : " ";
@@ -363,6 +449,12 @@ export function App(): React.JSX.Element {
     );
   };
 
+  /**
+   * 강좌 진도 덤프 설정 필드를 렌더링합니다.
+   *
+   * @param field 렌더링할 강좌 설정 필드
+   * @return 설정 필드 JSX
+   */
   const renderLectureField = (field: LectureField): React.JSX.Element => {
     const active = focusedField === field;
     const marker = active ? ">" : " ";
